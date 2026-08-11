@@ -28,7 +28,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const speechBtn = document.querySelector('button[data-mode="speech"]');
     if (speechBtn && !isMobile) {
         speechBtn.disabled = true;
-        speechBtn.innerHTML = `<img class="i" src="https://bexy.se/root/lib/assets/gfx/img/ico/btn/mic.svg" alt="Speech"> Voice Search [Mobile Only]`;
+        speechBtn.innerHTML = `<img class="i" src="/root/lib/assets/gfx/img/ico/btn/mic.svg" alt="Speech"> Voice Search [Mobile Only]`;
     }
 
     /* --- MODAL & EVENT DELEGATION --- */
@@ -82,13 +82,13 @@ document.addEventListener('DOMContentLoaded', () => {
             let domain = site.url;
             try { domain = new URL(site.url).hostname; } catch(e) {}
 
-            a.innerHTML = `<img src="https://icons.duckduckgo.com/ip3/${domain}.ico" alt="${site.name}" onerror="this.src='https://bexy.se/root/lib/assets/gfx/img/ico/favico/emblem/logo.svg'"><span>${site.name}</span>`;
+            a.innerHTML = `<img src="https://icons.duckduckgo.com/ip3/${domain}.ico" alt="${site.name}" onerror="this.src='/root/lib/assets/gfx/img/ico/favico/emblem/logo.svg'"><span>${site.name}</span>`;
             
             a.addEventListener('contextmenu', (e) => {
                 e.preventDefault();
                 showConfirm(`Are you sure you want to remove "${site.name}"?`, () => {
                     sites.splice(index, 1);
-                    localStorage.setItem('bex_shortcuts', JSON.stringify(sites));
+                    localStorage.setItem('shortcuts', JSON.stringify(sites));
                     renderShortcuts();
                 });
             });
@@ -221,7 +221,7 @@ document.addEventListener('DOMContentLoaded', () => {
             handleSecureProxySearch(file);
         } else if (currentMode === 'store') {
             e.preventDefault(); 
-            if (ui.textInput.value.trim()) window.location.href = `https://store.swedishstudiosgames.com/search?q=${encodeURIComponent(ui.textInput.value.trim())}`;
+            if (ui.textInput.value.trim()) window.location.href = `https://searx.tiekoetter.com/search?q=${encodeURIComponent(ui.textInput.value.trim())}`;
         }
     });
 
