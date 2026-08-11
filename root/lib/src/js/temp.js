@@ -2,7 +2,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const WORKER_URL = '/upload'; 
     let currentMode = 'web';
     let debounceTimeout;
-    let confirmCallback = null;
+    let confirmCallback = null; 
 
     const ui = {
         form: document.getElementById('sq'),
@@ -20,41 +20,48 @@ document.addEventListener('DOMContentLoaded', () => {
         msgText: document.getElementById('msg-text'),
         confirmModal: document.getElementById('confirm-modal'),
         confirmText: document.getElementById('confirm-text')
-    };
+    }; 
 
-    if (!ui.form) return;
+    if (!ui.form) return; 
 
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobi/i.test(navigator.userAgent);
     const speechBtn = document.querySelector('button[data-mode="speech"]');
     if (speechBtn && !isMobile) {
         speechBtn.disabled = true;
-        speechBtn.innerHTML = `<img class="i" src="/root/lib/assets/gfx/img/ico/btn/mic.svg" alt="Speech"> Voice Search [Mobile Only]`;
-    }
+        // Securely replaced innerHTML with DOM creation
+        speechBtn.textContent = ''; 
+        const micImg = document.createElement('img');
+        micImg.className = 'i';
+        micImg.src = '/root/lib/assets/gfx/img/ico/btn/mic.svg';
+        micImg.alt = 'Speech';
+        speechBtn.append(micImg, ' Voice Search [Mobile Only]');
+    } 
 
     /* --- MODAL & EVENT DELEGATION --- */
     function showMessage(title, text) {
         ui.msgTitle.innerText = title;
         ui.msgText.innerText = text;
         ui.msgModal.style.display = 'flex';
-    }
+    } 
 
     function showConfirm(text, callback) {
         ui.confirmText.innerText = text;
         confirmCallback = callback;
         ui.confirmModal.style.display = 'flex';
-    }
+    } 
 
     document.getElementById('confirm-yes').addEventListener('click', () => {
         ui.confirmModal.style.display = 'none';
         if (confirmCallback) confirmCallback();
-    });
+    }); 
 
     document.body.addEventListener('click', (e) => {
-        if (e.target.closest('.close-modal')) {
-            e.target.closest('.modal-overlay').style.display = 'none';
+        const closeModal = e.target.closest('.close-modal');
+        if (closeModal) {
+            closeModal.closest('.modal-overlay').style.display = 'none';
             if (e.target.id === 'confirm-no') confirmCallback = null;
         }
-    });
+    }); 
 
     /* --- SHORTCUTS --- */
     const defaultSites = [
@@ -62,13 +69,13 @@ document.addEventListener('DOMContentLoaded', () => {
         { name: "Reddit", url: "https://reddit.com" },
         { name: "GitHub", url: "https://github.com" },
         { name: "Wikipedia", url: "https://wikipedia.org" }
-    ];
+    ]; 
 
     let sites = [];
     try {
-        const savedData = localStorage.getItem('bex_shortcuts');
+        const savedData = localStorage.getItem('shortcuts');
         sites = savedData ? JSON.parse(savedData) : defaultSites;
-    } catch (e) { sites = defaultSites; }
+    } catch (e) { sites = defaultSites; } 
 
     function renderShortcuts() {
         ui.grid.innerHTML = '';
@@ -80,9 +87,22 @@ document.addEventListener('DOMContentLoaded', () => {
             a.rel = "noopener noreferrer"; 
 
             let domain = site.url;
-            try { domain = new URL(site.url).hostname; } catch(e) {}
+            try { 
+                domain = new URL(site.url).hostname; 
+            } catch(e) {} 
 
-            a.innerHTML = `<img src="https://icons.duckduckgo.com/ip3/${domain}.ico" alt="${site.name}" onerror="this.src='/root/lib/assets/gfx/img/ico/favico/emblem/logo.svg'"><span>${site.name}</span>`;
+            // Prevent DOM-based XSS by using document.createElement instead of innerHTML
+            const img = document.createElement('img');
+            img.src = `https://icons.duckduckgo.com/ip3/${domain}.ico`;
+            img.alt = site.name;
+            img.onerror = function() {
+                this.src = '/root/lib/assets/gfx/img/ico/favico/emblem/logo.svg';
+            };
+
+            const span = document.createElement('span');
+            span.textContent = site.name;
+
+            a.append(img, span);
             
             a.addEventListener('contextmenu', (e) => {
                 e.preventDefault();
@@ -93,14 +113,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             });
             ui.grid.appendChild(a);
-        });
+        }); 
 
         const addBtn = document.createElement('button');
         addBtn.className = 'shortcut-btn add-btn';
         addBtn.innerHTML = `<div class="add-icon">+</div><span>Add Site</span>`;
-        addBtn.addEventListener('click', (e) => { e.preventDefault(); ui.addModal.style.display = 'flex'; });
+        addBtn.addEventListener('click', (e) => { 
+            e.preventDefault(); 
+            ui.addModal.style.display = 'flex'; 
+        });
         ui.grid.appendChild(addBtn);
-    }
+    } 
 
     ui.addForm.addEventListener('submit', (e) => {
         e.preventDefault();
@@ -109,29 +132,36 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (name && url) {
             if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
-            sites.push({ name, url });
-            localStorage.setItem('bex_shortcuts', JSON.stringify(sites));
-            renderShortcuts();
-            ui.addForm.reset();
-            ui.addModal.style.display = 'none';
+            
+            try {
+                // Strict validation using the URL constructor
+                new URL(url); 
+                sites.push({ name, url });
+                localStorage.setItem('shortcuts', JSON.stringify(sites));
+                renderShortcuts();
+                ui.addForm.reset();
+                ui.addModal.style.display = 'none';
+            } catch (err) {
+                showMessage("Invalid URL", "Please enter a valid website format.");
+            }
         }
-    });
+    }); 
 
-    renderShortcuts();
+    renderShortcuts(); 
 
     /* --- AUTOCOMPLETE --- */
     const acContainer = document.createElement('div');
     acContainer.className = 'autocomplete-items';
-    ui.textInput.parentNode.appendChild(acContainer);
+    ui.textInput.parentNode.appendChild(acContainer); 
 
-    window.bexAutocompleteCallback = (data) => {
+    window.AutocompleteCallback = (data) => {
         const suggestions = data[1] || []; 
         acContainer.innerHTML = '';
         if (suggestions.length > 0 && ui.textInput.value.trim()) {
             suggestions.forEach(phrase => {
                 const div = document.createElement('div');
                 div.className = 'autocomplete-item';
-                div.innerText = phrase;
+                div.innerText = phrase; 
                 div.addEventListener('click', (e) => {
                     e.preventDefault();
                     ui.textInput.value = phrase;
@@ -141,8 +171,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 acContainer.appendChild(div);
             });
             acContainer.style.display = 'block';
-        } else { acContainer.style.display = 'none'; }
-    };
+        } else { 
+            acContainer.style.display = 'none'; 
+        }
+    }; 
 
     ui.textInput.addEventListener('input', function() {
         const val = this.value;
@@ -152,35 +184,40 @@ document.addEventListener('DOMContentLoaded', () => {
         
         clearTimeout(debounceTimeout);
         debounceTimeout = setTimeout(() => {
-            const oldScript = document.getElementById('jsonp-script');
-            if (oldScript) oldScript.remove();
+            const scriptId = 'jsonp-script';
+            const oldScript = document.getElementById(scriptId);
+            if (oldScript) oldScript.remove(); 
 
             const script = document.createElement('script');
-            script.id = 'jsonp-script';
-            script.src = `https://suggestqueries.google.com/complete/search?client=firefox&q=${encodeURIComponent(val)}&callback=bexAutocompleteCallback`;
+            script.id = scriptId;
+            script.src = `https://suggestqueries.google.com/complete/search?client=firefox&q=${encodeURIComponent(val)}&callback=AutocompleteCallback`;
+            
+            // Clean up the DOM to prevent memory leaks once the script executes or fails
+            script.onload = script.onerror = () => script.remove();
+            
             document.body.appendChild(script);
         }, 150); 
-    });
+    }); 
 
     ui.clearBtn.addEventListener('click', () => {
         ui.textInput.value = '';
         ui.clearBtn.classList.add('hidden');
         ui.textInput.focus();
-    });
+    }); 
 
     /* --- MENU & SEARCH MODES --- */
     ui.menuBtn.addEventListener('click', (e) => {
         e.preventDefault(); e.stopPropagation(); 
         const isVisible = ui.menuDropdown.classList.toggle('force-show');
         ui.menuBtn.setAttribute('aria-expanded', isVisible);
-    });
+    }); 
 
     document.addEventListener('click', (e) => {
         if (!ui.menuBtn.contains(e.target) && !ui.menuDropdown.contains(e.target)) {
             ui.menuDropdown.classList.remove('force-show');
             acContainer.style.display = 'none';
         }
-    });
+    }); 
 
     ui.modeBtns.forEach(btn => {
         btn.addEventListener('click', (e) => {
@@ -199,15 +236,15 @@ document.addEventListener('DOMContentLoaded', () => {
             ui.fileInput.classList.toggle('hidden', currentMode !== 'image');
             
             if (currentMode === 'image') ui.textInput.removeAttribute('required');
-            else ui.textInput.setAttribute('required', '');
+            else ui.textInput.setAttribute('required', ''); 
 
             if (currentMode === 'store') ui.textInput.placeholder = "Search the store...";
             else if (currentMode === 'speech') startDictation();
-            else ui.textInput.placeholder = "Search the internet...";
+            else ui.textInput.placeholder = "Search the internet..."; 
 
             ui.menuDropdown.classList.remove('force-show');
         });
-    });
+    }); 
 
     /* --- SUBMISSION HANDLERS --- */
     ui.form.addEventListener('submit', (e) => {
@@ -216,22 +253,27 @@ document.addEventListener('DOMContentLoaded', () => {
             const file = ui.fileInput.files[0];
             if (!file || !['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp'].includes(file.type)) {
                 showMessage("Invalid File", "Please upload a valid image file.");
-                ui.fileInput.value = ''; return;
+                ui.fileInput.value = ''; 
+                return;
             }
             handleSecureProxySearch(file);
         } else if (currentMode === 'store') {
             e.preventDefault(); 
-            if (ui.textInput.value.trim()) window.location.href = `https://searx.tiekoetter.com/search?q=${encodeURIComponent(ui.textInput.value.trim())}`;
+            if (ui.textInput.value.trim()) {
+                window.location.href = `https://searx.tiekoetter.com/search?q=${encodeURIComponent(ui.textInput.value.trim())}`;
+            }
         }
-    });
+    }); 
 
     function handleSecureProxySearch(file) {
         const newTab = window.open('', '_blank');
         if (!newTab) return showMessage("Popup Blocked", "Please allow popups to use the secure image proxy.");
         
-        newTab.document.write(`<html style="font-family:sans-serif; text-align:center; padding-top:50px;"><h2>Uploading...</h2><div id="s">Contacting Secure Proxy...</div></html>`);
+        // Replaced document.write() with document.body.innerHTML for modern browser compliance
+        newTab.document.body.innerHTML = `<div style="font-family:sans-serif; text-align:center; padding-top:50px;"><h2>Uploading...</h2><div id="s">Contacting Secure Proxy...</div></div>`; 
 
-        const formData = new FormData(); formData.append('image', file);
+        const formData = new FormData(); 
+        formData.append('image', file); 
 
         fetch(WORKER_URL, { method: 'POST', body: formData })
         .then(res => res.json())
@@ -244,28 +286,35 @@ document.addEventListener('DOMContentLoaded', () => {
         .catch(err => {
             newTab.document.body.innerHTML = `<h2 style="color:red">Error</h2><p>${err.message}</p>`;
         });
-    }
+    } 
 
     function startDictation() {
         const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-        if (!SR) return showMessage("Not Supported", "Speech recognition is not supported in this browser.");
+        if (!SR) return showMessage("Not Supported", "Speech recognition is not supported in this browser."); 
 
         const recognition = new SR();
         recognition.lang = navigator.language || 'en-US';
         recognition.interimResults = false;
         
         ui.textInput.placeholder = "Listening... (Speak now)";
-        try { recognition.start(); } catch (e) {}
+        try { recognition.start(); } catch (e) {} 
 
         recognition.onresult = (e) => {
             ui.textInput.value = e.results[0][0].transcript;
             ui.textInput.placeholder = "Search the internet...";
             if (ui.textInput.value.trim()) ui.form.submit();
         };
-        recognition.onspeechend = () => { recognition.stop(); ui.textInput.placeholder = "Search the internet..."; };
+        
+        recognition.onspeechend = () => { 
+            recognition.stop(); 
+            ui.textInput.placeholder = "Search the internet..."; 
+        };
+        
         recognition.onerror = (e) => {
             ui.textInput.placeholder = "Search the internet...";
-            if (e.error !== 'no-speech') showMessage("Microphone Error", "Could not hear you. Check your permissions.");
+            if (e.error !== 'no-speech') {
+                showMessage("Microphone Error", "Could not hear you. Check your permissions.");
+            }
         };
     }
 });
